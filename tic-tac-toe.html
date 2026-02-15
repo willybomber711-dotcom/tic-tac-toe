@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tic-Tac-Toe</title>
+  <!-- iOS: use as app when added to home screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tic-Tac-Toe">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #eee;
+      padding: 1rem;
+      padding-top: max(1rem, env(safe-area-inset-top));
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      color: #e94560;
+    }
+
+    .turn {
+      font-size: 1.1rem;
+      margin-bottom: 1.25rem;
+      color: #a0a0a0;
+      min-height: 1.5em;
+    }
+
+    .turn strong {
+      color: #e94560;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      background: #160f60;
+      padding: 0.75rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .cell {
+      width: 90px;
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: #16213e;
+      border: 2px solid #1a1a2e;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .cell:hover:not(.taken) {
+      background: #1f2d4a;
+      transform: scale(1.02);
+    }
+
+    .cell.taken {
+      cursor: default;
+    }
+
+    .cell.doge {
+      color: #c2a633;
+    }
+
+    .cell.bitcoin {
+      color: #f7931a;
+    }
+
+    .cell img {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+    .message {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      min-height: 1.5em;
+      text-align: center;
+    }
+
+    .message.win {
+      color: #4ade80;
+    }
+
+    .message.tie {
+      color: #fbbf24;
+    }
+
+    .restart {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      background: #e94560;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .restart:hover {
+      background: #ff6b6b;
+      transform: scale(1.05);
+    }
+
+    .restart:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+  <h1>Tic-Tac-Toe</h1>
+  <p class="turn" id="turn">Player <strong>Ð</strong>'s turn</p>
+  <div class="board" id="board">
+    <button type="button" class="cell" data-index="0" aria-label="Cell 1"></button>
+    <button type="button" class="cell" data-index="1" aria-label="Cell 2"></button>
+    <button type="button" class="cell" data-index="2" aria-label="Cell 3"></button>
+    <button type="button" class="cell" data-index="3" aria-label="Cell 4"></button>
+    <button type="button" class="cell" data-index="4" aria-label="Cell 5"></button>
+    <button type="button" class="cell" data-index="5" aria-label="Cell 6"></button>
+    <button type="button" class="cell" data-index="6" aria-label="Cell 7"></button>
+    <button type="button" class="cell" data-index="7" aria-label="Cell 8"></button>
+    <button type="button" class="cell" data-index="8" aria-label="Cell 9"></button>
+  </div>
+  <p class="message" id="message"></p>
+  <button type="button" class="restart" id="restart">Restart Game</button>
+
+  <script>
+    const WIN_LINES = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
+    ];
+
+    let board = ['', '', '', '', '', '', '', '', ''];
+    const PLAYER_X = 'Ð';
+    const PLAYER_O = '₿';
+    const DOGE_IMG = 'https://upload.wikimedia.org/wikipedia/en/d/d0/Dogecoin_Logo.png';
+    let currentPlayer = PLAYER_X;
+    let gameOver = false;
+
+    const turnEl = document.getElementById('turn');
+    const messageEl = document.getElementById('message');
+    const boardEl = document.getElementById('board');
+    const restartBtn = document.getElementById('restart');
+
+    function getPlayerLabel(player) {
+      return player === PLAYER_X ? 'Ð' : 'Doge';
+    }
+
+    function updateTurn() {
+      if (gameOver) return;
+      const label = getPlayerLabel(currentPlayer);
+      turnEl.innerHTML = `Player <strong>${label}</strong>'s turn`;
+    }
+
+    function checkWinner() {
+      for (const [a, b, c] of WIN_LINES) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return board[a];
+        }
+      }
+      return null;
+    }
+
+    function isDraw() {
+      return board.every(cell => cell !== '');
+    }
+
+    function endGame(winner) {
+      gameOver = true;
+      turnEl.textContent = '';
+      if (winner) {
+        messageEl.textContent = `Player ${getPlayerLabel(winner)} wins!`;
+        messageEl.className = 'message win';
+      } else {
+        messageEl.textContent = "It's a tie!";
+        messageEl.className = 'message tie';
+      }
+    }
+
+    function handleCellClick(e) {
+      const cell = e.target;
+      if (!cell.classList.contains('cell')) return;
+      if (gameOver || cell.classList.contains('taken')) return;
+
+      const index = parseInt(cell.dataset.index, 10);
+      board[index] = currentPlayer;
+      if (currentPlayer === PLAYER_X) {
+        cell.textContent = currentPlayer;
+      } else {
+        const img = document.createElement('img');
+        img.src = DOGE_IMG;
+        img.alt = 'Doge';
+        cell.replaceChildren(img);
+      }
+      cell.classList.add('taken', currentPlayer === PLAYER_X ? 'doge' : 'bitcoin');
+
+      const winner = checkWinner();
+      if (winner) {
+        endGame(winner);
+        return;
+      }
+      if (isDraw()) {
+        endGame(null);
+        return;
+      }
+
+      currentPlayer = currentPlayer === PLAYER_X ? PLAYER_O : PLAYER_X;
+      updateTurn();
+    }
+
+    function restart() {
+      board = ['', '', '', '', '', '', '', '', ''];
+      currentPlayer = PLAYER_X;
+      gameOver = false;
+      messageEl.textContent = '';
+      messageEl.className = 'message';
+      updateTurn();
+      boardEl.querySelectorAll('.cell').forEach(cell => {
+        cell.replaceChildren('');
+        cell.classList.remove('taken', 'doge', 'bitcoin');
+      });
+    }
+
+    boardEl.addEventListener('click', handleCellClick);
+    restartBtn.addEventListener('click', restart);
+
+    updateTurn();
+  </script>
+</body>
+</html>
